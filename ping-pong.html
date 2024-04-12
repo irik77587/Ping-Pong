@@ -1,0 +1,207 @@
+<!-- ping pong table dimension := 7' x 3.5' -->
+<canvas width=700 height=350></canvas>
+<style>
+canvas {
+ background-color: black;
+}
+</style>
+<script>
+
+class Ball {
+	constructor(canvas_width, canvas_height, context, bgcolor) {
+		this.canvas_width = canvas_width;
+		this.canvas_height = canvas_height;
+		this.ctx = context
+		this.x = this.canvas_width / 2;
+		this.y = this.canvas_height / 2;
+		this.radius = 5;
+		this.color = "#22ff22";
+		this.bgcolor = bgcolor;
+		this.speed = 5;
+		const direction = Math.random() * Math.PI * 2;
+		this.xspeed = this.speed * Math.sin(direction).toFixed(2);
+		this.yspeed = this.speed * Math.cos(direction).toFixed(2);
+	}
+	restart() {
+		this.remove();
+		this.x = this.canvas_width / 2;
+		this.y = this.canvas_height / 2;
+		const direction = Math.random() * Math.PI * 2;
+		this.xspeed = this.speed * Math.sin(direction).toFixed(2);
+		this.yspeed = this.speed * Math.cos(direction).toFixed(2);
+	}
+	draw() {
+		this.ctx.fillStyle = this.color;
+		this.ctx.strokeStyle = this.bgcolor;
+		this.ctx.beginPath();
+		this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+		this.ctx.fill();
+		this.ctx.stroke();
+	}
+	remove() {
+		const upper_boundary = this.y - this.radius;
+		const boundary_length = this.radius + this.radius;
+		const lower_boundary = this.y + this.radius;
+		this.ctx.clearRect(this.x - this.radius, upper_boundary, boundary_length, boundary_length);
+	}
+	redraw() {
+		const upper_boundary = this.y - this.radius;
+		const lower_boundary = this.y + this.radius;
+		this.remove();
+		if(upper_boundary <= 0 || lower_boundary >= this.canvas_height) this.yspeed = -1 * this.yspeed;
+		this.x = this.x + this.xspeed;
+		this.y = this.y + this.yspeed;
+		this.draw();
+	}
+	within_boundary() {
+		return (this.x > this.radius && (this.x + this.radius) < this.canvas_width)
+	}
+	collision(player) {
+		const player_upper_bound = player.y;
+		const player_lower_bound = player.y + player.height;
+		const ball_upper_bound = this.y - this.radius;
+		const ball_lower_bound = this.y + this.radius;
+		const player_left_bound = player.x;
+		const player_right_bound = player.x + player.width;
+		const ball_left_bound = this.x - this.radius;
+		const ball_right_bound = this.x + this.radius
+		const ball_in_player_region_y = ball_upper_bound >= player_upper_bound && ball_lower_bound <= player_lower_bound;
+		const ball_in_player_region_x = ball_left_bound <= player_right_bound && ball_right_bound >= player_left_bound;
+		const player_hit = ball_in_player_region_y && ball_in_player_region_x;
+		if(player_hit) {
+			this.xspeed = -1 * this.xspeed;
+		}
+	}
+}
+
+class Player {
+	constructor(initialPosition, context, canvas_width, canvas_height) {
+		this.speed = 5;
+		this.ctx = context;
+		this.y = 10;
+		this.width = 10;
+		this.height = 100;
+		this.ymax = canvas_height - this.height;
+		if(initialPosition == "left") {
+			this.x = 0;
+			this.color = "#ff2222"
+		} else {
+			this.x = canvas_width - this.width;
+			this.color = "#ffff22";
+		}
+	}
+	draw(move = undefined) {
+		this.ctx.clearRect(this.x,this.y,this.width,this.height);
+		switch(move) {
+			case "up":
+				this.y = this.y > 0 ? this.y - this.speed : 0;
+				break;
+			case "down":
+				this.y = this.y < this.ymax ? this.y + this.speed : this.ymax;
+				break;
+		}
+		this.ctx.fillStyle = this.color;
+		this.ctx.fillRect(this.x,this.y,this.width,this.height);
+	}
+}
+
+function start() {
+
+	// initialization
+	const canvas = document.getElementsByTagName("canvas")[0];
+	const ctx = canvas.getContext("2d");
+
+	// tablenet
+	function redraw_tablenet() {
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(canvas.width / 2,0,1,canvas.height);
+	}
+	redraw_tablenet();
+	
+	// player 1
+	//ctx.fillStyle = "#ff2222";
+	//ctx.fillRect(0,10,10,100);
+	const player1 = new Player("left", ctx, canvas.width, canvas.height);
+	player1.draw();
+	
+	// player 2
+	//ctx.fillStyle = "#ffff22";
+	//ctx.fillRect(690,10,10,100);
+	const player2 = new Player("right", ctx, canvas.width, canvas.height);
+	player2.draw();
+	
+	// ball
+	//ctx.fillStyle = "#22ff22";
+	//ctx.strokeStyle = "#22ff22";
+	//ctx.beginPath();
+	//ctx.arc(50,20,5,0,Math.PI*2);
+	//ctx.fill();
+	//ctx.stroke();
+	const ball = new Ball(canvas.width, canvas.height, ctx, "#000000");
+	ball.draw();
+	
+	let PLAYER1UP = false, PLAYER1DOWN = false, PLAYER2UP = false, PLAYER2DOWN = false; 
+	
+	document.body.addEventListener("keydown", event => {
+    	switch(event.code) {
+    		case "Space":
+    			ball.restart();
+    			gameloop();
+    			break;
+    		case "KeyP":
+    			PLAYER2UP = true;
+    			break;
+    		case "KeyL":
+    			PLAYER2DOWN = true;
+    			break;
+    		case "KeyW":
+    			PLAYER1UP = true;
+    			break;
+    		case "KeyS":
+    			PLAYER1DOWN = true;
+    			break;
+    	}
+	});
+	
+		document.body.addEventListener("keyup", event => {
+    	switch(event.code) {
+    		case "KeyP":
+    			PLAYER2UP = false;
+    			break;
+    		case "KeyL":
+    			PLAYER2DOWN = false;
+    			break;
+    		case "KeyW":
+    			PLAYER1UP = false;
+    			break;
+    		case "KeyS":
+    			PLAYER1DOWN = false;
+    			break;
+    	}
+	});
+	
+	function gameloop() {
+		ball.redraw();
+		redraw_tablenet();
+		// Move player
+		const player1_direction = PLAYER1UP && !PLAYER1DOWN ? "up" : PLAYER1DOWN && !PLAYER1UP ? "down" : undefined;
+		const player2_direction = PLAYER2UP && !PLAYER2DOWN ? "up" : PLAYER2DOWN && !PLAYER2UP ? "down" : undefined;
+		// Draw player
+		player1.draw(player1_direction);
+		player2.draw(player2_direction);
+		// Ball collision
+		ball.collision(player1);
+		ball.collision(player2);
+		if(ball.within_boundary()) {
+			window.requestAnimationFrame(gameloop);
+		} else {
+			// game over
+			ball.remove();
+			player1.draw();
+			player2.draw();
+		}
+	}
+}
+
+start();
+</script>
