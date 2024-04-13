@@ -1,5 +1,6 @@
 <!-- ping pong table dimension := 7' x 3.5' -->
 <canvas width=700 height=350></canvas>
+<p></p>
 <style>
 canvas {
  background-color: black;
@@ -89,6 +90,7 @@ class Player {
 			this.x = canvas_width - this.width;
 			this.color = "#ffff22";
 		}
+		this.score = 0;
 	}
 	draw(move = undefined) {
 		this.ctx.clearRect(this.x,this.y,this.width,this.height);
@@ -103,6 +105,20 @@ class Player {
 		this.ctx.fillStyle = this.color;
 		this.ctx.fillRect(this.x,this.y,this.width,this.height);
 	}
+	win() {
+		this.score = this.score + 1;
+	}
+}
+
+// draw scoreboard
+function clear_canvas(context, canvas_height, canvas_width) {
+	context.clearRect(0, 0, canvas_width, canvas_height);
+}
+function draw_scoreboard(context, player_score, enemy_score, canvas_half_height) {
+	context.font = "50px Monospace";
+	context.fillStyle = "white";
+	context.fillText(player_score, canvas_half_height, canvas_half_height);
+	context.fillText(enemy_score, 3 * canvas_half_height, canvas_half_height);
 }
 
 function start() {
@@ -110,6 +126,9 @@ function start() {
 	// initialization
 	const canvas = document.getElementsByTagName("canvas")[0];
 	const ctx = canvas.getContext("2d");
+	
+	const canvas_half_height = canvas.height / 2;
+	
 
 	// tablenet
 	function redraw_tablenet() {
@@ -140,14 +159,20 @@ function start() {
 	const ball = new Ball(canvas.width, canvas.height, ctx, "#000000");
 	ball.draw();
 	
-	let PLAYER1UP = false, PLAYER1DOWN = false, PLAYER2UP = false, PLAYER2DOWN = false; 
+	let PLAYER1UP = false, PLAYER1DOWN = false, PLAYER2UP = false, PLAYER2DOWN = false;
 	
+	let GAMEOVER = true;
+		
 	document.body.addEventListener("keydown", event => {
     	switch(event.code) {
     		case "Space":
     			ball.restart();
-    			gameloop();
-    			break;
+    			if(GAMEOVER) {
+					GAMEOVER = false;
+					clear_canvas(ctx, canvas.height, canvas.width);
+					gameloop();
+    			}
+				break;
     		case "KeyP":
     			PLAYER2UP = true;
     			break;
@@ -180,6 +205,8 @@ function start() {
     	}
 	});
 	
+	draw_scoreboard(ctx, player1.score, player2.score, canvas_half_height);
+	
 	function gameloop() {
 		ball.redraw();
 		redraw_tablenet();
@@ -195,10 +222,21 @@ function start() {
 		if(ball.within_boundary()) {
 			window.requestAnimationFrame(gameloop);
 		} else {
+			clear_canvas(ctx, canvas.height, canvas.width);
+			// scoreboard
+			if(ball.x * 2 < canvas.width) {
+				player2.win();
+			}
+			if (ball.x * 2 > canvas.width) {
+				player1.win();
+			}
 			// game over
-			ball.remove();
+			ball.restart();
+			redraw_tablenet();
 			player1.draw();
 			player2.draw();
+			draw_scoreboard(ctx, player1.score, player2.score, canvas_half_height);
+			GAMEOVER = true;
 		}
 	}
 }
